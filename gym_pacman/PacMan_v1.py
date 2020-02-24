@@ -141,6 +141,7 @@ class PacMan_v1(gym.Env):
         # Count some stats
         self._episode += 1
         self._nr_moves = 0
+        self._total_reward = 0
 
         return self._get_observation()
 
@@ -184,16 +185,22 @@ class PacMan_v1(gym.Env):
         self._layer_1_pacman[:] = BoardStatus.EMPTY    # Clear last PacMan position
         self._set_cell_value(self._layer_1_pacman, self.position, BoardStatus.PACMAN)
 
+        # Update total reward
+        self._total_reward += reward
+
         # If there are no more dots the episode is over
         if np.count_nonzero(self._layer_0_board == BoardStatus.DOT) == 0:
-            logging.debug("Board cleared in %s steps", self._nr_moves)
-            self.is_over = True
             # Board cleared - bonus reward!
-            reward += self._board_size[0]*self._board_size[1]
+            bonus_reward = self._board_size[0]*self._board_size[1]
+            self._total_reward += bonus_reward
+            reward += bonus_reward
 
-        # If the agent has done 1000+ moves and still didn't clear the board the episode is over too
+            logging.debug("Board cleared in %s steps. Total reward: %d", self._nr_moves, self._total_reward)
+            self.is_over = True
+
+        # If the agent has done 'self._max_moves' and still didn't clear the board the episode is over too
         elif self._nr_moves >= self._max_moves:
-            logging.debug("Board not cleared")
+            logging.debug("Board not cleared. Total_reward: %d", self._total_reward)
             self.is_over = True
 
         ret = (self._get_observation(), reward, self.is_over, {})
@@ -219,7 +226,7 @@ class PacMan_v1(gym.Env):
         pix_y = np_xy[1] * self.cell_size + self.cell_size/2
         return (pix_x, pix_y)
 
-    def _build_board(self):
+    def _build_render_board(self):
         board = []
         for x in range(self._board_size[0]):
             board.append([])
@@ -230,7 +237,7 @@ class PacMan_v1(gym.Env):
                 dot.set_color(0, 0, 0)
                 self._viewer.add_geom(dot)
                 board[x].append(dot)
-        self._board = board
+        self._render_board = board
 
     def render(self, mode='human'):
         screen_width = self._board_size[0] * self.cell_size
@@ -239,7 +246,7 @@ class PacMan_v1(gym.Env):
         if self._viewer is None:
             self._viewer = rendering.Viewer(screen_width, screen_height)
 
-            self._build_board()
+            self._build_render_board()
             self._pacmantrans = rendering.Transform()
             self._pacman = rendering.make_circle(self.cell_size*0.8/2, filled=True)
             self._pacman.set_color(0.8, 0.8, 0)
@@ -247,7 +254,7 @@ class PacMan_v1(gym.Env):
             self._viewer.add_geom(self._pacman)
 
         # Clear dot under our position
-        self._board[self.position[0]][self.position[1]].set_color(0.9, 0.9, 0.9)
+        self._render_board[self.position[0]][self.position[1]].set_color(0.9, 0.9, 0.9)
 
         # Move PacMan
         new_x, new_y = self._idx2geom(self.position)
