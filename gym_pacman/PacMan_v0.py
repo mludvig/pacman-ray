@@ -15,6 +15,7 @@ from enum import IntEnum
 
 import gym
 from gym import spaces
+from gym.envs.classic_control import rendering
 import numpy as np
 
 logging.basicConfig(format='%(levelname)s %(message)s', level=logging.DEBUG)
@@ -53,6 +54,11 @@ class PacMan_v0(gym.Env):
 
     __version__ = "0.0.1"
 
+    metadata = {
+        'render.modes': ['human', 'rgb_array'],
+        'video.frames_per_second': 2
+    }
+
     def __init__(self, config={}):
         """
         Initialise the environment.
@@ -90,6 +96,12 @@ class PacMan_v0(gym.Env):
         # Episode counter
         self._episode = 0
 
+        # Rendering cell size in px
+        self.cell_size = 20
+
+        #  Rendering viewer
+        self._viewer = None
+
         self.reset()
 
     def reset(self):
@@ -113,6 +125,11 @@ class PacMan_v0(gym.Env):
 
         # Episode is not yet over
         self.is_over = False
+
+        # Reset rendering viewer
+        if self._viewer is not None:
+            self._viewer.close()
+            self._viewer = None
 
         # Count some stats
         self._episode += 1
@@ -193,8 +210,50 @@ class PacMan_v0(gym.Env):
     def _get_observation(self):
         return self._board.flatten()
 
+    ## Rendering support
+
+    def _idx2geom(self, np_xy):
+        # Calculate viewer dot center from numpy array index
+        pix_x = np_xy[0] * self.cell_size + self.cell_size/2
+        pix_y = np_xy[1] * self.cell_size + self.cell_size/2
+        return (pix_x, pix_y)
+
+    def _build_render_board(self):
+        board = []
+        for x in range(self._board_size[0]):
+            board.append([])
+            for y in range(self._board_size[1]):
+                dot = rendering.make_circle(self.cell_size * 0.5/2)
+                dot_pos = self._idx2geom((x, y))
+                dot.add_attr(rendering.Transform(translation=dot_pos))
+                dot.set_color(0, 0, 0)
+                self._viewer.add_geom(dot)
+                board[x].append(dot)
+        self._render_board = board
+
     def render(self, mode='human'):
-        return
+        screen_width = self._board_size[0] * self.cell_size
+        screen_height = self._board_size[1] * self.cell_size
+
+        if self._viewer is None:
+            self._viewer = rendering.Viewer(screen_width, screen_height)
+
+            self._build_render_board()
+            self._pacmantrans = rendering.Transform()
+            self._pacman = rendering.make_circle(self.cell_size*0.8/2, filled=True)
+            self._pacman.set_color(0.8, 0.8, 0)
+            self._pacman.add_attr(self._pacmantrans)
+            self._viewer.add_geom(self._pacman)
+
+        # Clear dot under our position
+        self._render_board[self.position[0]][self.position[1]].set_color(0.9, 0.9, 0.9)
+
+        # Move PacMan
+        new_x, new_y = self._idx2geom(self.position)
+        self._pacmantrans.set_translation(new_x, new_y)
+
+        return self._viewer.render(return_rgb_array = mode=='rgb_array')
+
 
     def seed(self, seed=None):
         """
@@ -206,3 +265,9 @@ class PacMan_v0(gym.Env):
         """
         random.seed(seed)
         np.random.seed(seed)
+
+
+    def close(self):
+        if self._viewer:
+            self._viewer.close()
+            self._viewer = None
