@@ -44,6 +44,10 @@ else:
     path = trainer.save()
     print(f"Saved checkpoint {path}")
 
+print("== Policy / Model ==")
+policy = trainer.get_policy()
+policy.model.base_model.summary()
+
 print("== Evaluating ==")
 
 env = PacMan_v0(config=env_config)
