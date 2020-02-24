@@ -38,9 +38,9 @@ class PacMan_v0(gym.Env):
     The environment defines which actions can be taken at which point and
     when the agent receives which reward.
 
-    Observation is an array of:
-    - 10x10 matrix where each cell is either 1 (not visited) or 0 (already visited)
-    - pacman position on the board as (x, y) tuple
+    Observation is a flattened array of representing the board matrix where
+    each cell is either 1 (not visited), 0 (already visited) or 2 (PacMan position).
+    See BoardStatus above.
 
     Action space is [LEFT, RIGHT, UP, DOWN]
 
@@ -52,16 +52,16 @@ class PacMan_v0(gym.Env):
 
     __version__ = "0.0.1"
 
-    def __init__(self, additional_simulator_parameters={}):
+    def __init__(self, config={}):
         """
         Initialise the environment.
 
         Parameters
         ----------
         All OpenAI-Gym parameters, including:
-        additional_simulator_parameters : dict
-            board_size: (int, int)      defaults to (10, 10)
-            max_moves: int              defaults to 1000
+        config : dict
+            board_size: (int, int)      defaults to (5, 5)
+            max_moves: int              defaults to {size_x} * {size_y} * 4
 
         """
         print("PacMan-v0 version: %s" % self.__version__)
@@ -69,12 +69,12 @@ class PacMan_v0(gym.Env):
         print("gym version: %s" % gym.__version__)
 
         # Playing board size
-        self._board_size = additional_simulator_parameters.get('board_size', (5, 5))
+        self._board_size = config.get('board_size', (5, 5))
         self._board = np.full(self._board_size, BoardStatus.DOT)
         logging.debug("Board size: %s", self._board_size)
 
         # Maximum number of moves
-        self._max_moves = additional_simulator_parameters.get('max_moves', 500)
+        self._max_moves = config.get('max_moves', self._board_size[0]*self._board_size[1]*4)
         logging.debug("Max moves: %s", self._max_moves)
 
         # The actions the agent can choose from (must be named 'self.action_space')

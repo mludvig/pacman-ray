@@ -60,16 +60,16 @@ class PacMan_v1(gym.Env):
 
     _repeat_multiplier_ = 4     # prevent "kernel is bigger than input" error
 
-    def __init__(self, board_size=(5,5), max_moves=100):
+    def __init__(self, config={}):
         """
         Initialise the environment.
 
         Parameters
         ----------
         All OpenAI-Gym parameters, including:
-        additional_simulator_parameters : dict
-            board_size: (int, int)      defaults to (10, 10)
-            max_moves: int              defaults to 2000
+        config : dict
+            board_size: (int, int)      defaults to (5, 5)
+            max_moves: int              defaults to {size_x} * {size_y} * 4
 
         """
         super(PacMan_v1, self).__init__()
@@ -79,13 +79,11 @@ class PacMan_v1(gym.Env):
         logging.debug("gym version: %s", gym.__version__)
 
         # Playing board size
-        #self._board_size = additional_simulator_parameters.get('board_size', (5, 5))
-        self._board_size = board_size
+        self._board_size = config.get('board_size', (5, 5))
         logging.debug("Board size: %s", self._board_size)
 
         # Maximum number of moves
-        #self._max_moves = additional_simulator_parameters.get('max_moves', 500)
-        self._max_moves = max_moves
+        self._max_moves = config.get('max_moves', self._board_size[0]*self._board_size[1]*4)
         logging.debug("Max moves: %s", self._max_moves)
 
         # The actions the agent can choose from (must be named 'self.action_space')
