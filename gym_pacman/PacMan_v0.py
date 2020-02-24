@@ -48,6 +48,7 @@ class PacMan_v0(gym.Env):
     - Bumping into a wall is -1 (and position won't change)
     - visiting an already visited cell is -1
     - visiting a new cell is -1 + 1 = 0
+    Extra bonus reward for clearing the board.
     """
 
     __version__ = "0.0.1"
@@ -116,6 +117,7 @@ class PacMan_v0(gym.Env):
         # Count some stats
         self._episode += 1
         self._nr_moves = 0
+        self._total_reward = 0
 
         return self._get_observation()
 
@@ -161,14 +163,22 @@ class PacMan_v0(gym.Env):
             #self._set_cell_value(self.position, BoardStatus.EMPTY)
         self._set_cell_value(self.position, BoardStatus.PACMAN)
 
+        # Update total reward
+        self._total_reward += reward
+
         # If there are no more dots the episode is over
         if np.count_nonzero(self._board == BoardStatus.DOT) == 0:
-            logging.debug("Board cleared in %s steps", self._nr_moves)
+            # Board cleared - bonus reward!
+            bonus_reward = self._board_size[0]*self._board_size[1]
+            self._total_reward += bonus_reward
+            reward += bonus_reward
+
+            logging.debug("Board cleared in %s steps. Total reward: %d", self._nr_moves, self._total_reward)
             self.is_over = True
 
-        # If the agent has done 1000+ moves and still didn't clear the board the episode is over too
+        # If the agent has done 'self._max_moves' and still didn't clear the board the episode is over too
         elif self._nr_moves >= self._max_moves:
-            print("Board not cleared")
+            logging.debug("Board not cleared. Total_reward: %d", self._total_reward)
             self.is_over = True
 
         ret = (self._get_observation(), reward, self.is_over, {})
