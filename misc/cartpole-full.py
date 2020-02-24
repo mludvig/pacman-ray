@@ -9,7 +9,9 @@ ray.init()
 
 print("== Training ==")
 
-trainer = ppo.PPOTrainer(env='CartPole-v0')
+trainer = ppo.PPOTrainer(env='CartPole-v0', config={
+    "monitor": True,        # Enable MP4 rendering
+})
 trainer.train()
 
 print("== Policy / Model ==")
