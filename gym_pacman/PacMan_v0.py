@@ -25,6 +25,7 @@ class BoardStatus(IntEnum):
     EMPTY = 0
     DOT = 1
     PACMAN = 2
+    PACMAN_PREV = 3
 
 
 class Action(IntEnum):
@@ -83,6 +84,12 @@ class PacMan_v0(gym.Env):
         # Maximum number of moves
         self._max_moves = config.get('max_moves', self._board_size[0]*self._board_size[1]*4)
         logging.debug("Max moves: %s", self._max_moves)
+
+        # Go-back penalty
+        # When the agent goes back to a just visited cell it's penalised
+        # because we want it to go forward if possible
+        self._goback_penalty = config.get('goback_penalty', -5)
+        logging.debug("Go-back penalty: %s", self._goback_penalty)
 
         # The actions the agent can choose from (must be named 'self.action_space')
         self.action_space = spaces.Discrete(max(Action) + 1)
@@ -160,7 +167,10 @@ class PacMan_v0(gym.Env):
         # Increment moves
         self._nr_moves += 1
 
-        # Clear cell before updating position
+        # Keep the current position, we may need to set PACMAN_PREV later
+        last_position = self.position.copy()
+
+        # Clear the current PacMan cell before moving to the new position
         self._set_cell_value(self.position, BoardStatus.EMPTY)
 
         # Is it a valid move?
@@ -174,10 +184,24 @@ class PacMan_v0(gym.Env):
             self.position[1] += 1
         # else we don't change position
 
-        # Move PacMan to the new position
+        if self._goback_penalty:
+            # Did we go back to previous cell? If yes - penalise.
+            if self._get_cell_value(self.position) == BoardStatus.PACMAN_PREV:
+                reward += self._goback_penalty
+
+            # Clear previous PACMAN_PREV
+            for pos in self._find_cell_value(BoardStatus.PACMAN_PREV):
+                self._set_cell_value(pos, BoardStatus.EMPTY)
+
+            # Set new PACMAN_PREV
+            self._set_cell_value(last_position, BoardStatus.PACMAN_PREV)
+
+
+        # Add rewards for eating dots or going back
         if self._get_cell_value(self.position) == BoardStatus.DOT:
             reward += 1
-            #self._set_cell_value(self.position, BoardStatus.EMPTY)
+
+        # Move PacMan to the new position
         self._set_cell_value(self.position, BoardStatus.PACMAN)
 
         # Update total reward
@@ -206,6 +230,10 @@ class PacMan_v0(gym.Env):
 
     def _set_cell_value(self, position, value):
         self._board[position[0]][position[1]] = value
+
+    def _find_cell_value(self, value):
+        pos = np.where(self._board == value)
+        return list(zip(pos[0], pos[1]))
 
     def _get_observation(self):
         return self._board.flatten()
