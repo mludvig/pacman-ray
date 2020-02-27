@@ -15,7 +15,13 @@ from enum import IntEnum
 
 import gym
 from gym import spaces
-from gym.envs.classic_control import rendering
+try:
+    from gym.envs.classic_control import rendering
+    _rendering = True
+except Exception as e:
+    logging.warning("Rendering support disabled: %s", e)
+    _rendering = False
+
 import numpy as np
 
 logging.basicConfig(format='%(levelname)s %(message)s', level=logging.DEBUG)
@@ -260,6 +266,9 @@ class PacMan_v0(gym.Env):
         self._render_board = board
 
     def render(self, mode='human'):
+        if not _rendering:
+            return None
+
         screen_width = self._board_size[0] * self.cell_size
         screen_height = self._board_size[1] * self.cell_size
 
